@@ -1,0 +1,92 @@
+:root{
+  --bg: #000000;
+  --muted: #bdbdbd;
+  --line: rgba(255,255,255,0.08);
+  --purple: #812E96;
+}
+
+html,body{height:100%;}
+body{font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:var(--bg);}
+
+.card{
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+}
+
+.input-field{
+  width:100%;
+  background:transparent;
+  border:0;
+  border-bottom:1px solid var(--line);
+  padding:10px 8px;
+  color:#fff;
+  outline:none;
+  transition: border-color .12s, box-shadow .12s;
+}
+.input-field::placeholder{ color: rgba(255,255,255,0.18); }
+.input-field:focus{ border-bottom-color: rgba(129,46,150,0.9); outline: none; box-shadow: none; }
+.input-field::-moz-focus-inner{ border:0; }
+
+/* Prevent browser autofill background (Chrome / Safari) */
+input:-webkit-autofill,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+  box-shadow: 0 0 0px 1000px transparent inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Prevent Firefox orange focus ring / highlight */
+input:-moz-focusring { outline: none; }
+
+/* selection inside the input: visible purple tint */
+.input-field::selection{ background: rgba(129,46,150,0.4); color:#fff; }
+
+/* underline element to animate only the bottom line */
+.input-wrap{ position:relative; }
+.input-wrap .underline{
+  position:absolute; left:0; right:0; bottom:6px; height:2px;
+  background: rgba(255,255,255,0.06);
+  transform-origin:left center;
+  transform: scaleX(0);
+  transition: transform 220ms ease, background-color 220ms ease;
+}
+.input-wrap.activating .underline{ transform: scaleX(1); background-color: var(--purple); }
+
+.input-field[readonly]{ cursor:text; }
+
+.toggle-btn{
+  position:absolute; right:4px; top:50%; transform:translateY(-50%);
+  background:transparent; border:0; color:rgba(129,46,150,0.9); font-size:12px; cursor:pointer;
+  z-index:5;
+}
+
+.submit-btn{
+  width:100%; padding:10px 12px; border-radius:6px; background:transparent; border:1px solid rgba(255,255,255,0.08); color:#fff;
+  letter-spacing:0.6px; font-weight:600; cursor:pointer; transition:background .12s, transform .06s;
+}
+.submit-btn:hover:not(:disabled){ background: rgba(255,255,255,0.02); transform:translateY(-1px); }
+.submit-btn:disabled{ opacity:0.4; cursor:not-allowed; }
+
+a{ color:var(--purple); text-decoration:none; }
+
+/* password strength meter */
+.password-strength-container{
+  margin-top: 8px; display: flex; align-items: center; gap: 8px;
+}
+.password-strength-bar{
+  flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden;
+}
+.password-strength-fill{
+  height: 100%; background: linear-gradient(90deg, #ef4444, #f97316, #eab308, #22c55e);
+  width: 0%; transition: width 180ms ease;
+}
+.password-strength-text{
+  font-size: 11px; color: rgba(255,255,255,0.5); min-width: 45px;
+}
+
+/* small responsive tweaks */
+@media (min-width:768px){
+  .max-w-sm{max-width:420px}
+}
