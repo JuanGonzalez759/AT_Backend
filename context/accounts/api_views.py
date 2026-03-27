@@ -66,7 +66,17 @@ def login_api(request):
     username = (data.get('username') or '').strip()
     password = data.get('password') or ''
 
+    # Intentar autenticar por username
     user = authenticate(request, username=username, password=password)
+    
+    # Si falla y el username parece un email, buscar el username asociado
+    if user is None and '@' in username:
+        try:
+            user_obj = User.objects.get(email=username)
+            user = authenticate(request, username=user_obj.username, password=password)
+        except User.DoesNotExist:
+            pass
+    
     if user is None:
         return JsonResponse({'detail': 'Credenciales inválidas.'}, status=401)
 
