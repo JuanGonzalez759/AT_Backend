@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crear cuenta</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  </head>
+  <body class="bg-black text-white min-h-screen">
+
+    <a href="#" class="absolute top-6 left-6 text-purple-400 font-semibold">AniToki</a>
+
+    <div class="min-h-screen flex items-center justify-center">
+      <div class="w-full max-w-sm px-6">
+        <div class="text-center mb-6">
+          <h1 class="text-2xl font-extralight">Crear cuenta</h1>
+        </div>
+
+        <form method="post" class="card p-8 space-y-6" autocomplete="off" novalidate>
+          {% csrf_token %}
+          
+          <div>
+            <label class="block text-sm mb-2 text-gray-300">Dirección de email</label>
+            <div class="input-wrap relative">
+              <input id="email-input" name="email" type="text" required readonly
+                class="input-field" placeholder="" value="" autocomplete="off" autocorrect="off" autocapitalize="off" inputmode="email">
+              <span class="underline"></span>
+            </div>
+            <span id="email-error" class="text-red-400 text-xs mt-1 hidden"></span>
+          </div>
+
+          <div>
+            <label class="block text-sm mb-2 text-gray-300">Nombre de usuario</label>
+            <div class="input-wrap relative">
+              <input id="username-input" name="username" type="text" required readonly
+                class="input-field" placeholder="" value="" autocomplete="off" autocorrect="off" autocapitalize="off">
+              <span class="underline"></span>
+            </div>
+            <span id="username-error" class="text-red-400 text-xs mt-1 hidden"></span>
+          </div>
+
+          <div>
+            <label class="block text-sm mb-2 text-gray-300">Contraseña</label>
+            <div class="relative input-wrap">
+              <input id="password-input" name="password" type="password" required readonly class="input-field" placeholder="" autocomplete="off">
+              <button type="button" class="toggle-btn toggle-pwd-1">mostrar</button>
+              <span class="underline"></span>
+            </div>
+            <div class="password-strength-container">
+              <div class="password-strength-bar">
+                <div class="password-strength-fill"></div>
+              </div>
+              <span class="password-strength-text">Débil</span>
+            </div>
+            <span id="password-error" class="text-red-400 text-xs mt-1 hidden"></span>
+          </div>
+
+          <div>
+            <label class="block text-sm mb-2 text-gray-300">Confirmar contraseña</label>
+            <div class="relative input-wrap">
+              <input id="password-confirm-input" name="password_confirm" type="password" required readonly class="input-field" placeholder="" autocomplete="off">
+              <button type="button" class="toggle-btn toggle-pwd-2">mostrar</button>
+              <span class="underline"></span>
+            </div>
+            <span id="password-confirm-error" class="text-red-400 text-xs mt-1 hidden"></span>
+          </div>
+
+          {% if form.non_field_errors %}
+            <div class="text-red-400 text-xs space-y-1">
+              {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <div>
+            <button type="submit" class="submit-btn" id="submit-btn" disabled>CREAR CUENTA</button>
+          </div>
+
+          <div class="text-center text-xs text-purple-400">
+            <a href="{% url 'login' %}">¿Ya tienes cuenta?</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="{% static 'js/register.js' %}"></script>
+  </body>
+</html>
