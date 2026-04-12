@@ -56,6 +56,7 @@ def anime_list(request):
             'age_rating': anime.age_rating,
             'is_simulcast': anime.is_simulcast,
             'episode_count': anime.episode_count,
+            'anime_slug': anime.anime_slug,
             'created_at': anime.created_at.isoformat(),
         } for anime in page_obj]
         
@@ -98,6 +99,7 @@ def anime_list(request):
                 'age_rating': anime.age_rating,
                 'is_simulcast': anime.is_simulcast,
                 'episode_count': anime.episode_count,
+                'anime_slug': anime.anime_slug,
             }, status=201)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
@@ -125,6 +127,7 @@ def anime_detail(request, pk):
             'age_rating': anime.age_rating,
             'is_simulcast': anime.is_simulcast,
             'episode_count': anime.episode_count,
+            'anime_slug': anime.anime_slug,
         })
     
     elif request.method == "PUT":
@@ -155,6 +158,7 @@ def anime_detail(request, pk):
                 'age_rating': anime.age_rating,
                 'is_simulcast': anime.is_simulcast,
                 'episode_count': anime.episode_count,
+                'anime_slug': anime.anime_slug,
             })
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
@@ -331,6 +335,7 @@ def public_anime_list(request):
         'age_rating': anime.age_rating,
         'is_simulcast': anime.is_simulcast,
         'episode_count': anime.episode_count,
+        'anime_slug': anime.anime_slug,
         'created_at': anime.created_at.isoformat(),
     } for anime in page_obj]
     
@@ -366,6 +371,7 @@ def public_anime_detail(request, pk):
         'age_rating': anime.age_rating,
         'is_simulcast': anime.is_simulcast,
         'episode_count': anime.episode_count,
+        'anime_slug': anime.anime_slug,
     })
 
 
@@ -551,8 +557,13 @@ def public_anime_list(request):
         'cover_image': anime.cover_image,
         'background_image': anime.background_image,
         'rating': float(anime.rating),
+        'anime_slug': anime.anime_slug,
+        'audio_type': anime.audio_type,
+        'age_rating': anime.age_rating,
+        'is_simulcast': anime.is_simulcast,
+        'episode_count': anime.episode_count,
     } for anime in page_obj]
-    
+
     return JsonResponse({
         'results': data,
         'count': paginator.count,
@@ -577,8 +588,18 @@ def get_consumet_sources(request, anime_slug, episode_number):
         # Construir URL de Consumet
         url = f"https://api.consumet.org/anime/gogoanime/watch/{anime_slug}-episode-{episode_number}"
         
-        # Hacer request a Consumet con timeout
-        response = requests.get(url, timeout=10)
+        # Headers para evitar bloqueos
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Origin': 'https://anitaku.pe',
+            'Referer': 'https://anitaku.pe/',
+        }
+        
+        # Hacer request a Consumet con timeout y headers
+        response = requests.get(url, headers=headers, timeout=15)
         
         if response.status_code == 200:
             data = response.json()
@@ -586,7 +607,8 @@ def get_consumet_sources(request, anime_slug, episode_number):
         else:
             return JsonResponse({
                 'error': f'Consumet API error: {response.status_code}',
-                'message': 'No se pudieron obtener las fuentes de video'
+                'message': 'No se pudieron obtener las fuentes de video',
+                'url': url
             }, status=response.status_code)
             
     except requests.exceptions.Timeout:
