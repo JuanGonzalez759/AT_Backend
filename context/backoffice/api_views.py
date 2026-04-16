@@ -302,55 +302,6 @@ def episode_detail(request, pk):
 
 @login_required
 @require_http_methods(["GET"])
-def public_anime_list(request):
-    """Endpoint público para que todos los usuarios vean los animes"""
-    # Obtener parámetros de paginación
-    page = int(request.GET.get('page', 1))
-    page_size = int(request.GET.get('page_size', 20))
-    
-    # Validar page_size
-    if page_size > 100:
-        page_size = 100
-    if page_size < 1:
-        page_size = 20
-    
-    animes = Anime.objects.all()
-    paginator = Paginator(animes, page_size)
-    
-    try:
-        page_obj = paginator.get_page(page)
-    except EmptyPage:
-        page_obj = paginator.get_page(1)
-    
-    data = [{
-        'id': anime.id,
-        'title': anime.title,
-        'year': anime.year,
-        'genre': anime.genre,
-        'description': anime.description,
-        'cover_image': anime.cover_image,
-        'background_image': anime.background_image,
-        'rating': float(anime.rating),
-        'audio_type': anime.audio_type,
-        'age_rating': anime.age_rating,
-        'is_simulcast': anime.is_simulcast,
-        'episode_count': anime.episode_count,
-        'anime_slug': anime.anime_slug,
-        'created_at': anime.created_at.isoformat(),
-    } for anime in page_obj]
-    
-    return JsonResponse({
-        'results': data,
-        'count': paginator.count,
-        'num_pages': paginator.num_pages,
-        'current_page': page_obj.number,
-        'has_next': page_obj.has_next(),
-        'has_previous': page_obj.has_previous(),
-    }, safe=False)
-
-
-@login_required
-@require_http_methods(["GET"])
 def public_anime_detail(request, pk):
     """Endpoint público para que todos los usuarios vean detalles de un anime"""
     try:
