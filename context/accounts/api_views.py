@@ -44,6 +44,17 @@ def register_api(request):
         return JsonResponse({'detail': 'El email ya está registrado.'}, status=400)
 
     user = User.objects.create_user(username=username, email=email, password=password)
+    
+    # Crear perfil por defecto
+    from context.manager.models import Profile
+    Profile.objects.create(
+        user=user,
+        name=username,
+        avatar='/profiles/Profile1.png',
+        background='',
+        color='#000000'
+    )
+    
     login(request, user)
 
     return JsonResponse(
@@ -79,6 +90,17 @@ def login_api(request):
     
     if user is None:
         return JsonResponse({'detail': 'Credenciales inválidas.'}, status=401)
+
+    # Asegurar que el usuario tenga al menos un perfil
+    from context.manager.models import Profile
+    if not Profile.objects.filter(user=user).exists():
+        Profile.objects.create(
+            user=user,
+            name=user.username,
+            avatar='/profiles/Profile1.png',
+            background='',
+            color='#000000'
+        )
 
     login(request, user)
     return JsonResponse(

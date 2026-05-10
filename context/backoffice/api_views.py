@@ -749,22 +749,37 @@ def user_progress_list(request):
     Obtener todo el progreso de visualización del usuario actual
     """
     try:
+        # Verificar que el usuario esté autenticado
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'User not authenticated'}, status=401)
+        
         progress_list = WatchProgress.objects.filter(user=request.user).select_related('anime')
         
-        data = [{
-            'anime_id': p.anime.id,
-            'anime_title': p.anime.title,
-            'anime_cover': p.anime.cover_image,
-            'current_episode': p.current_episode,
-            'total_episodes': p.anime.episode_count,
-            'watched': p.watched,
-            'last_watched': p.last_watched.isoformat()
-        } for p in progress_list]
+        data = []
+        for p in progress_list:
+            try:
+                data.append({
+                    'anime_id': p.anime.id,
+                    'anime_title': p.anime.title,
+                    'anime_cover': p.anime.cover_image,
+                    'current_episode': p.current_episode,
+                    'total_episodes': p.anime.episode_count,
+                    'watched': p.watched,
+                    'last_watched': p.last_watched.isoformat()
+                })
+            except Exception as item_error:
+                # Si hay un error con un item específico, continuar con los demás
+                print(f"Error processing progress item {p.id}: {str(item_error)}")
+                continue
         
         return JsonResponse({'progress': data})
         
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        import traceback
+        print(f"Error in user_progress_list: {str(e)}")
+        print(traceback.format_exc())
+        # Devolver lista vacía en lugar de error 500
+        return JsonResponse({'progress': []})
 
 
 @login_required

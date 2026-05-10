@@ -23,6 +23,11 @@ def profile_list(request):
     
     elif request.method == "POST":
         try:
+            # Verificar límite de 4 perfiles por usuario
+            profile_count = Profile.objects.filter(user=request.user).count()
+            if profile_count >= 4:
+                return JsonResponse({'error': 'Máximo 4 perfiles permitidos por cuenta'}, status=400)
+            
             data = json.loads(request.body)
             profile = Profile.objects.create(
                 user=request.user,
@@ -78,6 +83,11 @@ def profile_detail(request, pk):
             return JsonResponse({'error': str(e)}, status=400)
     
     elif request.method == "DELETE":
+        # Verificar que no sea el último perfil
+        profile_count = Profile.objects.filter(user=request.user).count()
+        if profile_count <= 1:
+            return JsonResponse({'error': 'No puedes eliminar el último perfil'}, status=400)
+        
         profile.delete()
         return JsonResponse({'success': True}, status=204)
 
@@ -88,6 +98,7 @@ def watchlist(request):
     """Obtener la lista de guardados o agregar un anime"""
     # Obtener el perfil actual de la sesión
     profile_id = request.session.get('current_profile_id')
+    
     if not profile_id:
         return JsonResponse({'error': 'No profile selected'}, status=400)
     
@@ -97,22 +108,37 @@ def watchlist(request):
         return JsonResponse({'error': 'Profile not found'}, status=404)
     
     if request.method == "GET":
-        # Obtener todos los animes en la watchlist
-        watchlist_items = Watchlist.objects.filter(profile=profile).select_related('anime')
-        data = [{
-            'id': item.id,
-            'anime': {
-                'id': item.anime.id,
-                'title': item.anime.title,
-                'cover_image': item.anime.cover_image,
-                'description': item.anime.description,
-                'year': item.anime.year,
-                'status': item.anime.status,
-                'audio_type': item.anime.audio_type,
-            },
-            'added_at': item.added_at.isoformat()
-        } for item in watchlist_items]
-        return JsonResponse(data, safe=False)
+        try:
+            # Obtener todos los animes en la watchlist
+            watchlist_items = Watchlist.objects.filter(profile=profile).select_related('anime')
+            data = []
+            
+            for item in watchlist_items:
+                try:
+                    anime_data = {
+                        'id': item.id,
+                        'anime': {
+                            'id': item.anime.id,
+                            'title': item.anime.title,
+                            'cover_image': item.anime.cover_image,
+                            'description': item.anime.description or '',
+                            'year': item.anime.year,
+                            'audio_type': getattr(item.anime, 'audio_type', 'SUB'),
+                            'content_type': getattr(item.anime, 'content_type', 'SERIE'),
+                        },
+                        'added_at': item.added_at.isoformat()
+                    }
+                    data.append(anime_data)
+                except Exception as item_error:
+                    print(f"Error processing watchlist item {item.id}: {str(item_error)}")
+                    continue
+            
+            return JsonResponse(data, safe=False)
+        except Exception as e:
+            print(f"Error loading watchlist: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({'error': 'Error loading watchlist', 'detail': str(e)}, status=500)
     
     elif request.method == "POST":
         try:
@@ -140,6 +166,39 @@ def watchlist(request):
             return JsonResponse({'error': 'Anime not found'}, status=404)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def select_profile(request):
+    """Seleccionar un perfil y guardarlo en la sesión"""
+    try:
+        data = json.loads(request.body)
+        profile_id = data.get('profile_id')
+        
+        if not profile_id:
+            return JsonResponse({'error': 'profile_id is required'}, status=400)
+        
+        # Verificar que el perfil pertenece al usuario
+        profile = Profile.objects.get(pk=profile_id, user=request.user)
+        
+        # Guardar en la sesión
+        request.session['current_profile_id'] = profile_id
+        
+        return JsonResponse({
+            'success': True,
+            'profile': {
+                'id': profile.id,
+                'name': profile.name,
+                'avatar': profile.avatar,
+                'background': profile.background,
+                'color': profile.color,
+            }
+        })
+    except Profile.DoesNotExist:
+        return JsonResponse({'error': 'Profile not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
 
 
 @login_required
