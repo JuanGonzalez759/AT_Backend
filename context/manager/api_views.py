@@ -1,14 +1,11 @@
 from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.contrib.auth.decorators import login_required
+from rest_framework.decorators import api_view
 from .models import Profile, Watchlist
 from context.backoffice.models import Anime
 import json
 
 
-@login_required
-@require_http_methods(["GET", "POST"])
+@api_view(['GET', 'POST'])
 def profile_list(request):
     if request.method == "GET":
         profiles = Profile.objects.filter(user=request.user)
@@ -47,8 +44,7 @@ def profile_list(request):
             return JsonResponse({'error': str(e)}, status=400)
 
 
-@login_required
-@require_http_methods(["GET", "PUT", "DELETE"])
+@api_view(['GET', 'PUT', 'DELETE'])
 def profile_detail(request, pk):
     try:
         profile = Profile.objects.get(pk=pk, user=request.user)
@@ -92,8 +88,7 @@ def profile_detail(request, pk):
         return JsonResponse({'success': True}, status=204)
 
 
-@login_required
-@require_http_methods(["GET", "POST"])
+@api_view(['GET', 'POST'])
 def watchlist(request):
     """Obtener la lista de guardados o agregar un anime"""
     # Obtener el perfil actual de la sesión
@@ -168,8 +163,7 @@ def watchlist(request):
             return JsonResponse({'error': str(e)}, status=400)
 
 
-@login_required
-@require_http_methods(["POST"])
+@api_view(['POST'])
 def select_profile(request):
     """Seleccionar un perfil y guardarlo en la sesión"""
     try:
@@ -201,8 +195,7 @@ def select_profile(request):
         return JsonResponse({'error': str(e)}, status=400)
 
 
-@login_required
-@require_http_methods(["DELETE"])
+@api_view(['DELETE'])
 def watchlist_remove(request, anime_id):
     """Eliminar un anime de la lista de guardados"""
     profile_id = request.session.get('current_profile_id')
