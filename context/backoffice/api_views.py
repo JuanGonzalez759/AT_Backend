@@ -24,6 +24,26 @@ def admin_only(view_func):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def update_anime_dislikes(request, pk):
+    """Actualizar el número de dislikes de un anime"""
+    try:
+        anime = Anime.objects.get(pk=pk)
+    except Anime.DoesNotExist:
+        return JsonResponse({'error': 'Anime not found'}, status=404)
+    try:
+        data = json.loads(request.body)
+        dislikes = int(data.get('dislikes', anime.dislikes))
+        if dislikes < 0:
+            return JsonResponse({'error': 'Dislikes cannot be negative'}, status=400)
+        anime.dislikes = dislikes
+        anime.save()
+        return JsonResponse({'id': anime.id, 'dislikes': anime.dislikes})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@admin_only
+@api_view(['GET', 'POST'])
+def anime_list(request):
     if request.method == "GET":
         # Obtener parámetros de paginación
         page = int(request.GET.get('page', 1))
