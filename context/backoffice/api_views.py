@@ -1,37 +1,6 @@
 from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
-from django.core.paginator import Paginator, EmptyPage
-from .models import Anime, Episode, WatchProgress
-import json
-import requests
-from django.core.cache import cache
-from functools import wraps
-
-# Endpoint para actualizar dislikes
-@login_required
-@csrf_exempt
-@require_http_methods(["POST"])
-def update_anime_dislikes(request, pk):
-    """Actualizar el número de dislikes de un anime"""
-    try:
-        anime = Anime.objects.get(pk=pk)
-    except Anime.DoesNotExist:
-        return JsonResponse({'error': 'Anime not found'}, status=404)
-    try:
-        data = json.loads(request.body)
-        dislikes = int(data.get('dislikes', anime.dislikes))
-        if dislikes < 0:
-            return JsonResponse({'error': 'Dislikes cannot be negative'}, status=400)
-        anime.dislikes = dislikes
-        anime.save()
-        return JsonResponse({'id': anime.id, 'dislikes': anime.dislikes})
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-from django.contrib.auth.decorators import login_required
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from django.core.paginator import Paginator, EmptyPage
 from .models import Anime, Episode, WatchProgress
 import json
@@ -52,9 +21,9 @@ def admin_only(view_func):
     return wrapper
 
 
-@admin_only
-@require_http_methods(["GET", "POST"])
-def anime_list(request):
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_anime_dislikes(request, pk):
     if request.method == "GET":
         # Obtener parámetros de paginación
         page = int(request.GET.get('page', 1))
@@ -139,7 +108,7 @@ def anime_list(request):
 
 
 @admin_only
-@require_http_methods(["GET", "PUT", "DELETE"])
+@api_view(['GET', 'PUT', 'DELETE'])
 def anime_detail(request, pk):
     try:
         anime = Anime.objects.get(pk=pk)
@@ -203,8 +172,7 @@ def anime_detail(request, pk):
         return JsonResponse({'success': True}, status=204)
 
 
-@login_required
-@require_http_methods(["GET", "POST"])
+@api_view(['GET', 'POST'])
 def episode_list(request):
     if request.method == "GET":
         # Obtener parámetros de paginación y filtros
@@ -279,8 +247,7 @@ def episode_list(request):
             return JsonResponse({'error': str(e)}, status=400)
 
 
-@login_required
-@require_http_methods(["GET", "PUT", "DELETE"])
+@api_view(['GET', 'PUT', 'DELETE'])
 def episode_detail(request, pk):
     try:
         episode = Episode.objects.get(pk=pk)
@@ -335,8 +302,8 @@ def episode_detail(request, pk):
 
 # ========== ENDPOINTS PÚBLICOS PARA USUARIOS ==========
 
-@login_required
-@require_http_methods(["GET"])
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def public_anime_detail(request, pk):
     """Endpoint público para que todos los usuarios vean detalles de un anime"""
     try:
@@ -550,8 +517,8 @@ def jikan_anime_detail(request, mal_id):
         return JsonResponse({'error': f'Connection error: {str(e)}'}, status=503)
 
 # Vista pública para que todos los usuarios puedan ver los animes
-@login_required
-@require_http_methods(["GET"])
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def public_anime_list(request):
     """Endpoint público para listar y buscar animes disponibles"""
     # Obtener parámetros de paginación y búsqueda
@@ -617,8 +584,7 @@ def public_anime_list(request):
 
 # ===== VIDEO SOURCES ENDPOINTS =====
 
-@login_required
-@require_http_methods(["GET"])
+@api_view(['GET'])
 def get_consumet_sources(request, anime_slug, episode_number):
     """
     Obtener fuentes de video desde la base de datos
@@ -706,8 +672,7 @@ def get_consumet_sources(request, anime_slug, episode_number):
     })
 
 
-@login_required
-@require_http_methods(["GET"])
+@api_view(['GET'])
 def search_consumet_anime(request):
     """
     Buscar animes en Consumet/GogoAnime
@@ -735,8 +700,7 @@ def search_consumet_anime(request):
         return JsonResponse({'error': f'Connection error: {str(e)}'}, status=503)
 
 
-@login_required
-@require_http_methods(["GET"])
+@api_view(['GET'])
 def get_consumet_episodes(request, anime_id):
     """
     Obtener lista de episodios de Consumet para un anime ID de GogoAnime
@@ -767,8 +731,7 @@ def get_consumet_episodes(request, anime_id):
 
 # ===== WATCH PROGRESS ENDPOINTS =====
 
-@login_required
-@require_http_methods(["GET"])
+@api_view(['GET'])
 def user_progress_list(request):
     """
     Obtener todo el progreso de visualización de los perfiles del usuario actual
@@ -814,8 +777,7 @@ def user_progress_list(request):
         return JsonResponse({'progress': []})
 
 
-@login_required
-@require_http_methods(["GET", "POST"])
+@api_view(['GET', 'POST'])
 def anime_progress(request, anime_id):
     """
     GET: Obtener progreso de un anime específico para el perfil actual
@@ -927,8 +889,7 @@ def anime_progress(request, anime_id):
             return JsonResponse({'error': str(e)}, status=500)
 
 
-@login_required
-@require_http_methods(["DELETE"])
+@api_view(['DELETE'])
 def delete_progress(request, anime_id):
     """
     Eliminar progreso de un anime (resetear) para todos los perfiles del usuario
@@ -949,8 +910,7 @@ def delete_progress(request, anime_id):
 
 # ===== ANALYTICS ENDPOINTS =====
 
-@login_required
-@require_http_methods(["GET"])
+@api_view(['GET'])
 def analytics_metrics(request):
     """
     Obtener métricas generales de la plataforma
