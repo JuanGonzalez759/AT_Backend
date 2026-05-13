@@ -814,8 +814,8 @@ def anime_progress(request, anime_id):
     
     # Obtener el perfil actual
     try:
-        # Obtener profile_id del header o del body (para POST)
-        profile_id = request.headers.get('X-Profile-Id')
+        # Obtener profile_id del query param, header o del body (para POST)
+        profile_id = request.GET.get('profile_id') or request.headers.get('X-Profile-Id')
         
         if request.method == 'POST':
             try:
