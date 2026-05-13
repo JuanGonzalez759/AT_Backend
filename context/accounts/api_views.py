@@ -6,11 +6,14 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import PasswordResetToken
 
 
-@require_GET
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def health(request):
     return JsonResponse({'status': 'ok', 'message': 'Django API activa'})
 
@@ -23,7 +26,8 @@ def _read_json_body(request):
         return {}
 
 
-@require_POST
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def register_api(request):
     data = _read_json_body(request)
 
@@ -70,7 +74,8 @@ def register_api(request):
     )
 
 
-@require_POST
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def login_api(request):
     data = _read_json_body(request)
 
@@ -119,14 +124,14 @@ def login_api(request):
     )
 
 
-@require_POST
+@api_view(['POST'])
 def logout_api(request):
     # Con JWT, el logout se maneja en el frontend eliminando el token
     # No hay sesiones en el servidor que cerrar
     return JsonResponse({'detail': 'Sesión cerrada.'})
 
 
-@require_GET
+@api_view(['GET'])
 def user_api(request):
     # Con JWT, verificamos si el usuario está autenticado mediante el token
     # que se verifica automáticamente por JWTAuthentication
@@ -145,7 +150,8 @@ def user_api(request):
     )
 
 
-@require_POST
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def request_password_reset(request):
     """Solicita un reset de contraseña enviando un email al usuario"""
     data = _read_json_body(request)
@@ -284,7 +290,8 @@ El equipo de AniToki'''
     return JsonResponse({'detail': 'Te hemos enviado las instrucciones al correo. Si no lo ves, revisa tu carpeta de spam.'}, status=200)
 
 
-@require_POST
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def verify_reset_token(request):
     """Verifica si un token de reset es válido"""
     data = _read_json_body(request)
@@ -306,7 +313,8 @@ def verify_reset_token(request):
         return JsonResponse({'valid': False, 'detail': 'Token inválido.'}, status=400)
 
 
-@require_POST
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def reset_password(request):
     """Resetea la contraseña usando un token válido"""
     data = _read_json_body(request)
