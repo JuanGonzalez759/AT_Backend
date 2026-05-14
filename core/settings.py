@@ -126,14 +126,11 @@ CSRF_COOKIE_HTTPONLY = False  # Must be False for JavaScript to read it
 SESSION_COOKIE_SECURE = not DEBUG  # True in production (HTTPS)
 SESSION_COOKIE_SAMESITE = 'None' if not DEBUG else 'Lax'
 
-# Email configuration (Gmail SMTP - Producción)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')  # Tu Gmail
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')  # App Password de Gmail
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='AniToki <noreply@anitoki.com>')
+# Email configuration (Resend API - Producción)
+# Resend usa API HTTP (no SMTP bloqueado por Render)
+EMAIL_BACKEND = 'core.email_backend.ResendBackend'
+RESEND_API_KEY = config('RESEND_API_KEY', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='AniToki <onboarding@resend.dev>')
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # REST Framework configuration

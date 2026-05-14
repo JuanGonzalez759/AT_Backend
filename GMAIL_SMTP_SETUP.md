@@ -1,6 +1,51 @@
-# Configuración de Gmail SMTP para AniToki
+# ⚠️ Gmail SMTP NO funciona en Render Free Tier
 
-Guía completa para configurar el envío de emails usando Gmail SMTP (100% gratis, sin límites de trial).
+## 🔴 Problema Descubierto
+
+**Render Free tier bloquea puertos SMTP** (25, 587, 465) para prevenir spam.
+
+Cuando intentas usar Gmail SMTP, el servidor se queda esperando conectar al puerto 587 pero la conexión nunca se establece, causando un **WORKER TIMEOUT** después de 30 segundos.
+
+```
+[CRITICAL] WORKER TIMEOUT
+File "smtplib.py", line 341, in connect
+    self.sock = self._get_socket(host, port, self.timeout)
+```
+
+**Solo los planes de pago de Render** pueden hacer conexiones SMTP salientes.
+
+---
+
+## ✅ Solución: Usar Resend API en su lugar
+
+En lugar de Gmail SMTP, usa **Resend** que funciona con API HTTP (no bloqueado):
+
+### 👉 Sigue esta guía en su lugar:
+
+**[RESEND_SETUP.md](RESEND_SETUP.md)**
+
+---
+
+## 📊 Comparación
+
+| Característica | Gmail SMTP | Resend API |
+|----------------|------------|------------|
+| **Funciona en Render Free** | ❌ No (puertos bloqueados) | ✅ Sí (usa HTTP) |
+| **Emails/día** | 500 | 100 |
+| **Gratis forever** | ✅ | ✅ |
+| **Configuración** | 5 minutos | 2 minutos |
+
+---
+
+## 🔧 Si aún quieres usar Gmail SMTP...
+
+Necesitas **Render Standard plan** ($7/mes) que permite conexiones SMTP salientes.
+
+Pero para un proyecto de curso, **Resend API es gratis y funciona perfectamente**.
+
+---
+
+# Configuración de Gmail SMTP para AniToki (NO USAR EN RENDER FREE)
 
 ## ✅ Ventajas de Gmail SMTP
 
