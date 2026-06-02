@@ -9,7 +9,10 @@ from django.views.decorators.http import require_GET, require_POST
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import PasswordResetToken
+from .models import PasswordResetToken, DirectMessage
+from context.manager.models import Profile
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
 
 
 @api_view(['GET'])
@@ -356,3 +359,145 @@ def reset_password(request):
 
     except PasswordResetToken.DoesNotExist:
         return JsonResponse({'detail': 'Token inválido.'}, status=400)
+
+
+@api_view(['GET'])
+def list_users(request):
+    """Devuelve la lista de perfiles disponibles para chatear.
+
+    Cada item tiene: profile_id (nullable), user_id, name, avatar
+    Incluye todos los `Profile` creados y además agrega el usuario `admin`
+    aunque no tenga profile creado.
+    """
+    result = []
+
+    # Todos los perfiles
+    for p in Profile.objects.select_related('user').all():
+        # Omitir perfiles del usuario actual
+        if request.user.is_authenticated and p.user_id == request.user.id:
+            continue
+        result.append({
+            'profile_id': p.id,
+            'user_id': p.user_id,
+            'name': p.name,
+            'avatar': p.avatar,
+        })
+
+    # Asegurar que el usuario 'admin' aparezca (si existe y no es el propio usuario)
+    try:
+        admin_user = User.objects.get(username='admin')
+        if not (request.user.is_authenticated and admin_user.id == request.user.id):
+            # Check si admin tiene al menos un profile ya agregado
+            if not any(item['user_id'] == admin_user.id for item in result):
+                result.insert(0, {
+                    'profile_id': None,
+                    'user_id': admin_user.id,
+                    'name': admin_user.username,
+                    'avatar': '/profiles/Profile1.png',
+                })
+    except User.DoesNotExist:
+        pass
+
+    return JsonResponse({'profiles': result})
+
+
+@api_view(['GET', 'POST'])
+def messages_between(request, user_id):
+    """GET: obtiene mensajes entre request.user y user_id
+       POST: crea un mensaje del request.user a user_id con {content}
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'detail': 'Autenticación requerida.'}, status=401)
+
+    # Obtener usuario destino
+    other = get_object_or_404(User, id=user_id)
+
+    # Para soportar chats por perfil, el cliente debe pasar su profile activo como `my_profile_id`
+    # en query params (GET) o en el body JSON (POST).
+    if request.method == 'GET':
+        my_profile_id = request.GET.get('my_profile_id')
+        target_profile_id = request.GET.get('target_profile_id')
+        if not my_profile_id:
+            return JsonResponse({'detail': 'my_profile_id es requerido en la query string para chats por perfil.'}, status=400)
+
+        # Validar perfiles
+        try:
+            my_profile = Profile.objects.get(id=int(my_profile_id))
+        except Profile.DoesNotExist:
+            return JsonResponse({'detail': 'Profile no encontrado.'}, status=404)
+
+        # Si se proporciona target_profile_id, usar ese profile concreto
+        if target_profile_id:
+            try:
+                target_profile = Profile.objects.get(id=int(target_profile_id))
+            except Profile.DoesNotExist:
+                return JsonResponse({'detail': 'Target profile no encontrado.'}, status=404)
+
+            msgs = DirectMessage.objects.filter(
+                Q(sender_profile=my_profile, recipient_profile=target_profile) |
+                Q(sender_profile=target_profile, recipient_profile=my_profile)
+            ).order_by('created_at')
+        else:
+            # Target no tiene profile (ej. admin sin perfil). Filtrar por user y sender/recipient_profile is null
+            msgs = DirectMessage.objects.filter(
+                Q(sender_profile=my_profile, recipient_profile__isnull=True, recipient=other) |
+                Q(recipient_profile=my_profile, sender_profile__isnull=True, sender=other)
+            ).order_by('created_at')
+
+        data = [
+            {
+                'id': m.id,
+                'sender_id': m.sender_id,
+                'recipient_id': m.recipient_id,
+                'sender_profile_id': m.sender_profile_id,
+                'recipient_profile_id': m.recipient_profile_id,
+                'content': m.content,
+                'created_at': m.created_at.isoformat(),
+                'read': m.read,
+            }
+            for m in msgs
+        ]
+        return JsonResponse({'messages': data})
+
+    # POST - crear mensaje
+    data = _read_json_body(request)
+    content = (data.get('content') or '').strip()
+    my_profile_id = data.get('my_profile_id')
+    target_profile_id = data.get('target_profile_id')
+
+    if not content:
+        return JsonResponse({'detail': 'El contenido es obligatorio.'}, status=400)
+    if not my_profile_id:
+        return JsonResponse({'detail': 'my_profile_id es obligatorio en el body.'}, status=400)
+
+    try:
+        my_profile = Profile.objects.get(id=int(my_profile_id), user=request.user)
+    except Profile.DoesNotExist:
+        return JsonResponse({'detail': 'Profile del remitente inválido.'}, status=400)
+
+    # Para el profile destino, si se pasó target_profile_id usarlo, si no usar None (target user without profile)
+    dest_profile = None
+    if target_profile_id:
+        try:
+            dest_profile = Profile.objects.get(id=int(target_profile_id), user=other)
+        except Profile.DoesNotExist:
+            return JsonResponse({'detail': 'Target profile inválido.'}, status=400)
+
+    msg = DirectMessage.objects.create(
+        sender=request.user,
+        recipient=other,
+        sender_profile=my_profile,
+        recipient_profile=dest_profile,
+        content=content,
+    )
+
+    return JsonResponse({
+        'id': msg.id,
+        'sender_id': msg.sender_id,
+        'recipient_id': msg.recipient_id,
+        'sender_profile_id': msg.sender_profile_id,
+        'recipient_profile_id': msg.recipient_profile_id,
+        'content': msg.content,
+        'created_at': msg.created_at.isoformat(),
+        'read': msg.read,
+    }, status=201)

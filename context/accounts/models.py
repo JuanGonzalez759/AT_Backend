@@ -28,3 +28,22 @@ class PasswordResetToken(models.Model):
 
     def __str__(self):
         return f"Reset token for {self.user.username} - {'Valid' if self.is_valid() else 'Invalid'}"
+
+
+class DirectMessage(models.Model):
+    """Mensaje directo entre dos usuarios"""
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+    # Opcional: asociar mensaje a perfiles (cada usuario puede tener múltiples perfiles)
+    from context.manager.models import Profile as ProfileModel
+    sender_profile = models.ForeignKey('manager.Profile', null=True, blank=True, on_delete=models.SET_NULL, related_name='sent_messages')
+    recipient_profile = models.ForeignKey('manager.Profile', null=True, blank=True, on_delete=models.SET_NULL, related_name='received_messages')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.sender.username} -> {self.recipient.username}: {self.content[:30]}"
