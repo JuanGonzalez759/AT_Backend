@@ -61,10 +61,19 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database configuration
 # En producción (Render), usa DATABASE_URL
 # En desarrollo, usa SQLite o las variables de entorno individuales
-if config('DATABASE_URL', default=None):
+raw_db_url = config('DATABASE_URL', default=None)
+if raw_db_url:
+    # Ensure sslmode=require is present (some environments need explicit param)
+    db_url = raw_db_url
+    if 'sslmode' not in db_url:
+        if '?' in db_url:
+            db_url = f"{db_url}&sslmode=require"
+        else:
+            db_url = f"{db_url}?sslmode=require"
+
     DATABASES = {
         'default': dj_database_url.config(
-            default=config('DATABASE_URL'),
+            default=db_url,
             conn_max_age=600,
             conn_health_checks=True,
             ssl_require=True,
