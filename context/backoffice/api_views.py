@@ -2,7 +2,7 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from django.core.paginator import Paginator, EmptyPage
-from .models import Anime, Episode, WatchProgress
+from .models import Anime, Episode, WatchProgress, Manga
 import json
 import requests
 from django.core.cache import cache
@@ -128,6 +128,81 @@ def anime_list(request):
             return JsonResponse({'error': str(e)}, status=400)
 
 
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+@admin_only
+def manga_list(request):
+    """Listado y creación de mangas (admin only)"""
+    if request.method == 'GET':
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 20))
+        if page_size > 100:
+            page_size = 100
+        if page_size < 1:
+            page_size = 20
+
+        mangas = Manga.objects.all()
+        paginator = Paginator(mangas, page_size)
+        try:
+            page_obj = paginator.get_page(page)
+        except EmptyPage:
+            page_obj = paginator.get_page(1)
+
+        data = [{
+            'id': m.id,
+            'title': m.title,
+            'year': m.year,
+            'genre': m.genre,
+            'description': m.description,
+            'cover_image': m.cover_image,
+            'background_image': m.background_image,
+            'rating': float(m.rating),
+            'chapter_count': m.chapter_count,
+            'manga_slug': m.manga_slug,
+            'created_at': m.created_at.isoformat(),
+            'likes': m.likes,
+            'dislikes': m.dislikes,
+        } for m in page_obj]
+
+        return JsonResponse({
+            'results': data,
+            'count': paginator.count,
+            'num_pages': paginator.num_pages,
+            'current_page': page_obj.number,
+            'has_next': page_obj.has_next(),
+            'has_previous': page_obj.has_previous(),
+        }, safe=False)
+
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            manga = Manga.objects.create(
+                title=data.get('title'),
+                year=data.get('year'),
+                genre=data.get('genre', ''),
+                description=data.get('description', ''),
+                cover_image=data.get('cover_image', ''),
+                background_image=data.get('background_image', ''),
+                rating=data.get('rating', 0.0),
+                chapter_count=data.get('chapter_count', 0),
+                created_by=request.user,
+            )
+            return JsonResponse({
+                'id': manga.id,
+                'title': manga.title,
+                'year': manga.year,
+                'genre': manga.genre,
+                'description': manga.description,
+                'cover_image': manga.cover_image,
+                'background_image': manga.background_image,
+                'rating': float(manga.rating),
+                'chapter_count': manga.chapter_count,
+                'manga_slug': manga.manga_slug,
+            }, status=201)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 @admin_only
@@ -191,6 +266,63 @@ def anime_detail(request, pk):
     
     elif request.method == "DELETE":
         anime.delete()
+        return JsonResponse({'success': True}, status=204)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+@admin_only
+def manga_detail(request, pk):
+    try:
+        manga = Manga.objects.get(pk=pk)
+    except Manga.DoesNotExist:
+        return JsonResponse({'error': 'Manga not found'}, status=404)
+
+    if request.method == 'GET':
+        return JsonResponse({
+            'id': manga.id,
+            'title': manga.title,
+            'year': manga.year,
+            'genre': manga.genre,
+            'description': manga.description,
+            'cover_image': manga.cover_image,
+            'background_image': manga.background_image,
+            'rating': float(manga.rating),
+            'chapter_count': manga.chapter_count,
+            'manga_slug': manga.manga_slug,
+            'likes': manga.likes,
+            'dislikes': manga.dislikes,
+        })
+
+    elif request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            manga.title = data.get('title', manga.title)
+            manga.year = data.get('year', manga.year)
+            manga.genre = data.get('genre', manga.genre)
+            manga.description = data.get('description', manga.description)
+            manga.cover_image = data.get('cover_image', manga.cover_image)
+            manga.background_image = data.get('background_image', manga.background_image)
+            manga.rating = data.get('rating', manga.rating)
+            manga.chapter_count = data.get('chapter_count', manga.chapter_count)
+            manga.save()
+            return JsonResponse({
+                'id': manga.id,
+                'title': manga.title,
+                'year': manga.year,
+                'genre': manga.genre,
+                'description': manga.description,
+                'cover_image': manga.cover_image,
+                'background_image': manga.background_image,
+                'rating': float(manga.rating),
+                'chapter_count': manga.chapter_count,
+                'manga_slug': manga.manga_slug,
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    elif request.method == 'DELETE':
+        manga.delete()
         return JsonResponse({'success': True}, status=204)
 
 
@@ -351,6 +483,30 @@ def public_anime_detail(request, pk):
         'dislikes': anime.dislikes,
     })
 
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_manga_detail(request, pk):
+    try:
+        manga = Manga.objects.get(pk=pk)
+    except Manga.DoesNotExist:
+        return JsonResponse({'error': 'Manga not found'}, status=404)
+
+    return JsonResponse({
+        'id': manga.id,
+        'title': manga.title,
+        'year': manga.year,
+        'genre': manga.genre,
+        'description': manga.description,
+        'cover_image': manga.cover_image,
+        'background_image': manga.background_image,
+        'rating': float(manga.rating),
+        'chapter_count': manga.chapter_count,
+        'manga_slug': manga.manga_slug,
+        'likes': manga.likes,
+        'dislikes': manga.dislikes,
+    })
+
 # Endpoint para actualizar likes
 from django.views.decorators.csrf import csrf_exempt
 
@@ -469,6 +625,111 @@ def jikan_search(request):
             'error': f'Unexpected error: {str(e)}',
             'message': 'Error inesperado al procesar la búsqueda.'
         }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@admin_only
+def jikan_manga_search(request):
+    """Buscar mangas en Jikan API (MyAnimeList)"""
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse({'error': 'Query parameter "q" is required'}, status=400)
+
+    cache_key = f'jikan_search_manga_{query.replace(" ", "_")}'
+    cached_result = cache.get(cache_key)
+    if cached_result:
+        return JsonResponse(cached_result)
+
+    try:
+        response = requests.get(
+            f"{JIKAN_BASE_URL}/manga",
+            params={'q': query, 'limit': 10},
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            results = []
+            for item in data.get('data', []):
+                genres = ', '.join([g['name'] for g in item.get('genres', [])[:3]])
+                year = item.get('published', {}).get('prop', {}).get('from', {}).get('year')
+                score = item.get('score')
+                rating = round(score, 1) if score is not None else 0.0
+                results.append({
+                    'mal_id': item.get('mal_id'),
+                    'title': item.get('title'),
+                    'title_english': item.get('title_english'),
+                    'year': year,
+                    'genre': genres or 'Sin género',
+                    'description': item.get('synopsis', ''),
+                    'cover_image': item.get('images', {}).get('jpg', {}).get('large_image_url', ''),
+                    'background_image': item.get('images', {}).get('jpg', {}).get('large_image_url', ''),
+                    'rating': rating,
+                    'chapters': item.get('chapters'),
+                    'volumes': item.get('volumes'),
+                    'status': item.get('status'),
+                })
+
+            result = {'results': results}
+            cache.set(cache_key, result, 3600)
+            return JsonResponse(result)
+
+        elif response.status_code == 429:
+            return JsonResponse({'error': 'Jikan API rate limit exceeded.'}, status=429)
+        else:
+            return JsonResponse({'error': f'Jikan API error: {response.status_code}'}, status=response.status_code)
+
+    except requests.exceptions.Timeout:
+        return JsonResponse({'error': 'Jikan API timeout'}, status=504)
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({'error': f'Connection error: {str(e)}'}, status=503)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@admin_only
+def jikan_manga_detail(request, mal_id):
+    cache_key = f'jikan_manga_{mal_id}'
+    cached_result = cache.get(cache_key)
+    if cached_result:
+        return JsonResponse(cached_result)
+
+    try:
+        response = requests.get(f"{JIKAN_BASE_URL}/manga/{mal_id}", timeout=10)
+        if response.status_code == 200:
+            manga = response.json().get('data', {})
+            genres = ', '.join([g['name'] for g in manga.get('genres', [])])
+            year = manga.get('published', {}).get('prop', {}).get('from', {}).get('year')
+            score = manga.get('score')
+            rating = round(score, 1) if score is not None else 0.0
+
+            result = {
+                'mal_id': manga.get('mal_id'),
+                'title': manga.get('title'),
+                'title_english': manga.get('title_english'),
+                'year': year,
+                'genre': genres or 'Sin género',
+                'description': manga.get('synopsis', ''),
+                'cover_image': manga.get('images', {}).get('jpg', {}).get('large_image_url', ''),
+                'background_image': manga.get('images', {}).get('jpg', {}).get('large_image_url', ''),
+                'rating': rating,
+                'chapters': manga.get('chapters'),
+                'volumes': manga.get('volumes'),
+                'status': manga.get('status'),
+                'authors': ', '.join([a.get('name') for a in manga.get('authors', [])])
+            }
+
+            cache.set(cache_key, result, 86400)
+            return JsonResponse(result)
+        elif response.status_code == 429:
+            return JsonResponse({'error': 'Jikan API rate limit exceeded.'}, status=429)
+        else:
+            return JsonResponse({'error': f'Jikan API error: {response.status_code}'}, status=response.status_code)
+    except requests.exceptions.Timeout:
+        return JsonResponse({'error': 'Jikan API timeout'}, status=504)
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({'error': f'Connection error: {str(e)}'}, status=503)
 
 
 @api_view(['GET'])
@@ -594,6 +855,60 @@ def public_anime_list(request):
         'is_simulcast': anime.is_simulcast,
         'episode_count': anime.episode_count,
     } for anime in page_obj]
+
+    return JsonResponse({
+        'results': data,
+        'count': paginator.count,
+        'num_pages': paginator.num_pages,
+        'current_page': page_obj.number,
+        'has_next': page_obj.has_next(),
+        'has_previous': page_obj.has_previous(),
+    }, safe=False)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_manga_list(request):
+    page = int(request.GET.get('page', 1))
+    page_size = int(request.GET.get('page_size', 20))
+    search_query = request.GET.get('search', '').strip()
+
+    if page_size > 100:
+        page_size = 100
+    if page_size < 1:
+        page_size = 20
+
+    mangas = Manga.objects.all()
+
+    if search_query:
+        from django.db.models import Q
+        mangas = mangas.filter(
+            Q(title__icontains=search_query) |
+            Q(genre__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+        mangas = mangas.order_by('-rating', '-created_at')
+    else:
+        mangas = mangas.order_by('-created_at')
+
+    paginator = Paginator(mangas, page_size)
+    try:
+        page_obj = paginator.get_page(page)
+    except EmptyPage:
+        page_obj = paginator.get_page(1)
+
+    data = [{
+        'id': m.id,
+        'title': m.title,
+        'year': m.year,
+        'genre': m.genre,
+        'description': m.description,
+        'cover_image': m.cover_image,
+        'background_image': m.background_image,
+        'rating': float(m.rating),
+        'manga_slug': m.manga_slug,
+        'chapter_count': m.chapter_count,
+    } for m in page_obj]
 
     return JsonResponse({
         'results': data,

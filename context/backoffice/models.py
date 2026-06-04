@@ -123,3 +123,41 @@ class WatchProgress(models.Model):
     def __str__(self):
         return f"{self.profile.name} - {self.anime.title} (Ep. {self.current_episode})"
 
+
+class Manga(models.Model):
+    """Modelo básico para almacenar mangas de manera similar a `Anime`."""
+    title = models.CharField(max_length=255)
+    year = models.IntegerField(
+        validators=[
+            MinValueValidator(1900, message="El año no puede ser anterior a 1900"),
+            MaxValueValidator(datetime.now().year + 5, message="El año no puede ser tan futuro")
+        ]
+    )
+    genre = models.CharField(max_length=255, blank=True)
+    description = models.TextField(blank=True)
+    cover_image = models.URLField(max_length=500, blank=True)
+    background_image = models.URLField(max_length=500, blank=True)
+    rating = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        default=0.0,
+        validators=[
+            MinValueValidator(0.0, message="La calificación no puede ser negativa"),
+            MaxValueValidator(10.0, message="La calificación no puede ser mayor a 10.0")
+        ]
+    )
+    chapter_count = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    manga_slug = models.CharField(max_length=255, blank=True, help_text='Slug identificador del manga')
+
+    likes = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    dislikes = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.title} ({self.year})'
+

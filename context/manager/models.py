@@ -24,14 +24,20 @@ class Profile(models.Model):
 
 class Watchlist(models.Model):
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='watchlist')
-    anime = models.ForeignKey('backoffice.Anime', on_delete=models.CASCADE, related_name='in_watchlists')
+    anime = models.ForeignKey('backoffice.Anime', on_delete=models.CASCADE, related_name='in_watchlists', null=True, blank=True)
+    manga = models.ForeignKey('backoffice.Manga', on_delete=models.CASCADE, related_name='in_watchlists_manga', null=True, blank=True)
     added_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-added_at']
-        unique_together = ('profile', 'anime')
+        # uniqueness enforced at API level for (profile, anime) or (profile, manga)
         verbose_name = 'Watchlist Item'
         verbose_name_plural = 'Watchlist Items'
 
     def __str__(self):
-        return f'{self.profile.name} - {self.anime.title}'
+        title = None
+        if self.anime_id and getattr(self.anime, 'title', None):
+            title = self.anime.title
+        elif self.manga_id and getattr(self.manga, 'title', None):
+            title = self.manga.title
+        return f'{self.profile.name} - {title or "item"}'
