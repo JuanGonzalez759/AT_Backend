@@ -17,6 +17,8 @@ urlpatterns = [
     path('public/animes/<int:pk>/', api_views.public_anime_detail, name='public_anime_detail'),
     path('public/mangas/', api_views.public_manga_list, name='public_manga_list'),
     path('public/mangas/<int:pk>/', api_views.public_manga_detail, name='public_manga_detail'),
+    path('public/mangas/<int:pk>/chapters/', api_views.public_manga_chapters, name='public_manga_chapters'),
+    path('public/mangas/<int:pk>/chapters/<int:chapter_number>/', api_views.public_manga_chapter_pages, name='public_manga_chapter_pages'),
     path('public/animes/<int:pk>/likes/', api_views.update_anime_likes, name='update_anime_likes'),
     path('public/animes/<int:pk>/dislikes/', api_views.update_anime_dislikes, name='update_anime_dislikes'),
     

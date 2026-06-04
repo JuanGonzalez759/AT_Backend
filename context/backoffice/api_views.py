@@ -2,7 +2,7 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from django.core.paginator import Paginator, EmptyPage
-from .models import Anime, Episode, WatchProgress, Manga
+from .models import Anime, Episode, WatchProgress, Manga, Chapter, Page
 import json
 import requests
 from django.core.cache import cache
@@ -492,6 +492,10 @@ def public_manga_detail(request, pk):
     except Manga.DoesNotExist:
         return JsonResponse({'error': 'Manga not found'}, status=404)
 
+    uploaded = []
+    for ch in manga.chapters.all().order_by('number'):
+        uploaded.append({'number': ch.number, 'page_count': ch.pages.count()})
+
     return JsonResponse({
         'id': manga.id,
         'title': manga.title,
@@ -502,10 +506,50 @@ def public_manga_detail(request, pk):
         'background_image': manga.background_image,
         'rating': float(manga.rating),
         'chapter_count': manga.chapter_count,
+        # uploaded_chapters: list of chapters actually present on this site (empty if none)
+        'uploaded_chapters': uploaded,
         'manga_slug': manga.manga_slug,
         'likes': manga.likes,
         'dislikes': manga.dislikes,
     })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_manga_chapters(request, pk):
+    """List chapters for a public manga with basic metadata."""
+    try:
+        manga = Manga.objects.get(pk=pk)
+    except Manga.DoesNotExist:
+        return JsonResponse({'error': 'Manga not found'}, status=404)
+
+    chapters = []
+    for ch in manga.chapters.all().order_by('number'):
+        chapters.append({
+            'number': ch.number,
+            'title': ch.title,
+            'language': ch.language,
+            'page_count': ch.pages.count(),
+        })
+
+    return JsonResponse({'chapters': chapters})
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def public_manga_chapter_pages(request, pk, chapter_number):
+    """Return pages (image URLs) for a given manga chapter."""
+    try:
+        ch = Chapter.objects.get(manga_id=pk, number=chapter_number)
+    except Chapter.DoesNotExist:
+        return JsonResponse({'error': 'Chapter not found'}, status=404)
+
+    pages = []
+    for p in ch.pages.all().order_by('page_number'):
+        url = request.build_absolute_uri(p.image.url)
+        pages.append({ 'page_number': p.page_number, 'url': url })
+
+    return JsonResponse({'chapter': ch.number, 'pages': pages})
 
 # Endpoint para actualizar likes
 from django.views.decorators.csrf import csrf_exempt
@@ -897,18 +941,22 @@ def public_manga_list(request):
     except EmptyPage:
         page_obj = paginator.get_page(1)
 
-    data = [{
-        'id': m.id,
-        'title': m.title,
-        'year': m.year,
-        'genre': m.genre,
-        'description': m.description,
-        'cover_image': m.cover_image,
-        'background_image': m.background_image,
-        'rating': float(m.rating),
-        'manga_slug': m.manga_slug,
-        'chapter_count': m.chapter_count,
-    } for m in page_obj]
+    data = []
+    for m in page_obj:
+        uploaded = [{'number': ch.number, 'page_count': ch.pages.count()} for ch in m.chapters.all().order_by('number')]
+        data.append({
+            'id': m.id,
+            'title': m.title,
+            'year': m.year,
+            'genre': m.genre,
+            'description': m.description,
+            'cover_image': m.cover_image,
+            'background_image': m.background_image,
+            'rating': float(m.rating),
+            'manga_slug': m.manga_slug,
+            'chapter_count': m.chapter_count,
+            'uploaded_chapters': uploaded,
+        })
 
     return JsonResponse({
         'results': data,

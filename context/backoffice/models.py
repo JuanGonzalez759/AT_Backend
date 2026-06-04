@@ -161,3 +161,30 @@ class Manga(models.Model):
     def __str__(self):
         return f'{self.title} ({self.year})'
 
+
+class Chapter(models.Model):
+    manga = models.ForeignKey(Manga, on_delete=models.CASCADE, related_name='chapters')
+    number = models.IntegerField()
+    title = models.CharField(max_length=255, blank=True)
+    language = models.CharField(max_length=10, default='es')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('manga', 'number')
+        ordering = ['number']
+
+    def __str__(self):
+        return f'{self.manga.title} - Cap {self.number}'
+
+
+class Page(models.Model):
+    chapter = models.ForeignKey(Chapter, on_delete=models.CASCADE, related_name='pages')
+    page_number = models.IntegerField()
+    image = models.FileField(upload_to='mangas/%Y/%m/%d/')
+
+    class Meta:
+        ordering = ['page_number']
+
+    def __str__(self):
+        return f'{self.chapter} - P{self.page_number}'
+

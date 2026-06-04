@@ -147,6 +147,8 @@ def watchlist(request):
                                 'year': manga_obj.year,
                                 'audio_type': 'MANGA',
                                 'content_type': 'MANGA',
+                                # indicate uploaded chapters on site (empty if none)
+                                'uploaded_chapters': [],
                             },
                             'added_at': item.added_at.isoformat(),
                             'content_type': 'MANGA'
