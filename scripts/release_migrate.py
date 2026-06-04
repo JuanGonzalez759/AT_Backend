@@ -10,13 +10,21 @@ if not DB_URL:
     print('DATABASE_URL not set; exiting')
     sys.exit(1)
 
-max_attempts = int(os.environ.get('DB_WAIT_ATTEMPTS', '60'))
-wait_seconds = int(os.environ.get('DB_WAIT_SECONDS', '2'))
+max_attempts = int(os.environ.get('DB_WAIT_ATTEMPTS', '120'))
+wait_seconds = int(os.environ.get('DB_WAIT_SECONDS', '3'))
 
 print(f"Waiting for database to be available (attempts={max_attempts}, wait={wait_seconds}s)...")
 for attempt in range(1, max_attempts + 1):
     try:
-        conn = psycopg2.connect(DB_URL, connect_timeout=5)
+        # Ensure sslmode=require is present in the URL
+        db_url = DB_URL
+        if 'sslmode' not in (db_url or ''):
+            if '?' in db_url:
+                db_url = f"{db_url}&sslmode=require"
+            else:
+                db_url = f"{db_url}?sslmode=require"
+
+        conn = psycopg2.connect(db_url, connect_timeout=5)
         conn.close()
         print('Database is available')
         break
