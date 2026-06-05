@@ -6,6 +6,16 @@ services:
     buildCommand: |
       pip install -r requirements.txt
       python manage.py migrate --noinput
+      echo "=== BUILD DIAGNOSTIC: PWD ==="
+      pwd
+      echo "=== BUILD DIAGNOSTIC: LISTING CURRENT DIR ==="
+      ls -la
+      echo "=== BUILD DIAGNOSTIC: LISTING PARENT DIR ==="
+      ls -la ..
+      echo "=== BUILD DIAGNOSTIC: TRY HEAD fixtures.json ==="
+      head -n 20 fixtures.json || true
+      echo "=== BUILD DIAGNOSTIC: TRY HEAD AT_Backend/fixtures.json ==="
+      head -n 20 AT_Backend/fixtures.json || true
       if [ -f AT_Backend/fixtures.json ]; then
         echo "AT_Backend/fixtures.json found: loading data..."
         python manage.py loaddata AT_Backend/fixtures.json
