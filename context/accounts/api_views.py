@@ -1,4 +1,5 @@
 import json
+import logging
 
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
@@ -32,6 +33,16 @@ def _read_json_body(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_api(request):
+    # Debug logging: capture raw body and key headers to diagnose empty/malformed payloads in prod
+    logger = logging.getLogger(__name__)
+    try:
+        raw_body = request.body.decode('utf-8')
+    except Exception:
+        raw_body = str(request.body)
+    logger.info("[DEBUG register_api] raw_body=%s", raw_body)
+    logger.info("[DEBUG register_api] HOST=%s CONTENT_TYPE=%s CONTENT_LENGTH=%s ORIGIN=%s",
+                request.META.get('HTTP_HOST'), request.META.get('CONTENT_TYPE'), request.META.get('CONTENT_LENGTH'), request.META.get('HTTP_ORIGIN'))
+
     data = _read_json_body(request)
 
     username = (data.get('username') or '').strip()
@@ -80,6 +91,16 @@ def register_api(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_api(request):
+    # Debug logging: capture raw body and key headers to diagnose login issues in prod
+    logger = logging.getLogger(__name__)
+    try:
+        raw_body = request.body.decode('utf-8')
+    except Exception:
+        raw_body = str(request.body)
+    logger.info("[DEBUG login_api] raw_body=%s", raw_body)
+    logger.info("[DEBUG login_api] HOST=%s CONTENT_TYPE=%s CONTENT_LENGTH=%s ORIGIN=%s",
+                request.META.get('HTTP_HOST'), request.META.get('CONTENT_TYPE'), request.META.get('CONTENT_LENGTH'), request.META.get('HTTP_ORIGIN'))
+
     data = _read_json_body(request)
 
     username = (data.get('username') or '').strip()
