@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: anitoki-backend
+    env: python
+    branch: main
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py migrate --noinput
+      if [ -f fixtures.json ]; then
+        echo "fixtures.json found: loading data..."
+        python manage.py loaddata fixtures.json || true
+      else
+        echo "no fixtures.json found"
+      fi
+        python manage.py collectstatic --noinput
+    startCommand: gunicorn core.wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: core.settings
+    healthCheckPath: /api/health/
