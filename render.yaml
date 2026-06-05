@@ -58,11 +58,26 @@ PY
       p = os.environ.get('RENDER_ADMIN_PASS')
       e = os.environ.get('RENDER_ADMIN_EMAIL', 'admin@example.com')
       if u and p:
-        if not User.objects.filter(username=u).exists():
+        user_qs = User.objects.filter(username=u)
+        if not user_qs.exists():
           User.objects.create_superuser(u, e, p)
           print('Created superuser', u)
         else:
-          print('Superuser exists', u)
+          user = user_qs.first()
+          # Ensure it's staff/superuser and update password to the provided one
+          updated = False
+          if not user.is_superuser:
+            user.is_superuser = True
+            updated = True
+          if not user.is_staff:
+            user.is_staff = True
+            updated = True
+          # Always set password to match provided secret (idempotent)
+          user.set_password(p)
+          user.save()
+          print('Superuser exists — password updated for', u)
+          if updated:
+            print('Also ensured staff/superuser flags for', u)
       else:
         print('RENDER_ADMIN_USER or RENDER_ADMIN_PASS not set')
       PY
