@@ -47,7 +47,26 @@ else:
     print('RENDER_ADMIN_USER or RENDER_ADMIN_PASS not set')
 PY
       fi
-    startCommand: gunicorn core.wsgi:application --bind 0.0.0.0:$PORT
+    startCommand: |
+      python - <<PY
+      import os, django
+      os.environ.setdefault("DJANGO_SETTINGS_MODULE","core.settings")
+      django.setup()
+      from django.contrib.auth import get_user_model
+      User = get_user_model()
+      u = os.environ.get('RENDER_ADMIN_USER')
+      p = os.environ.get('RENDER_ADMIN_PASS')
+      e = os.environ.get('RENDER_ADMIN_EMAIL', 'admin@example.com')
+      if u and p:
+        if not User.objects.filter(username=u).exists():
+          User.objects.create_superuser(u, e, p)
+          print('Created superuser', u)
+        else:
+          print('Superuser exists', u)
+      else:
+        print('RENDER_ADMIN_USER or RENDER_ADMIN_PASS not set')
+      PY
+      exec gunicorn core.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --log-file -
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: core.settings
