@@ -23,7 +23,7 @@ head -n 20 AT_Backend/fixtures.json || true
 for f in fixtures.json AT_Backend/fixtures.json; do
   if [ -f "$f" ]; then
     echo "Normalizing JSON encoding for $f"
-    python - <<PY
+    python - "$f" <<PY
 import io, sys
 path = sys.argv[1]
 with io.open(path, 'r', encoding='utf-8-sig') as src:
@@ -32,7 +32,7 @@ with io.open(path, 'w', encoding='utf-8') as dst:
     dst.write(data)
 print('Normalized', path)
 PY
-    fi
+  fi
 done
 
 if [ -f AT_Backend/fixtures.json ]; then
