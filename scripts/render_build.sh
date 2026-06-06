@@ -19,14 +19,20 @@ echo "=== BUILD DIAGNOSTIC: TRY HEAD AT_Backend/fixtures.json ==="
 head -n 20 AT_Backend/fixtures.json || true
 
 # Normalize JSON fixtures to remove UTF-8 BOM if present (prevents JSONDecodeError in loaddata)
+# Use Python's utf-8-sig codec to safely remove BOM if present and rewrite file
 for f in fixtures.json AT_Backend/fixtures.json; do
   if [ -f "$f" ]; then
-    # check for BOM and strip it
-    if head -c 3 "$f" | grep -q $'\xEF\xBB\xBF'; then
-      echo "Stripping BOM from $f"
-      tail -c +4 "$f" > "$f".nobom && mv "$f".nobom "$f"
+    echo "Normalizing JSON encoding for $f"
+    python - <<PY
+import io, sys
+path = sys.argv[1]
+with io.open(path, 'r', encoding='utf-8-sig') as src:
+    data = src.read()
+with io.open(path, 'w', encoding='utf-8') as dst:
+    dst.write(data)
+print('Normalized', path)
+PY
     fi
-  fi
 done
 
 if [ -f AT_Backend/fixtures.json ]; then
