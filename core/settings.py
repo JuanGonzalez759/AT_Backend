@@ -9,7 +9,16 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me')
 
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+_raw_allowed = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+ALLOWED_HOSTS = list(_raw_allowed) if _raw_allowed is not None else []
+
+# If Render exposes a public hostname at runtime, include it automatically.
+# Render sets `RENDER_EXTERNAL_HOSTNAME` in the runtime environment; some
+# environments may also provide `RENDER_SERVICE_NAME`.
+_render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME') or os.environ.get('RENDER_SERVICE_NAME') or ''
+if _render_host:
+    if _render_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_render_host)
 
 INSTALLED_APPS = [
     'django.contrib.admin',
