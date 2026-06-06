@@ -3,7 +3,7 @@ services:
     name: anitoki-backend
     env: python
     branch: main
-    buildCommand: bash AT_Backend/scripts/render_build.sh
+    buildCommand: bash scripts/render_build.sh
     startCommand: |
       python - <<PY
       import os, django
