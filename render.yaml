@@ -4,41 +4,7 @@ services:
     env: python
     branch: main
     buildCommand: bash scripts/render_build.sh
-    startCommand: |
-      python - <<PY
-      import os, django
-      os.environ.setdefault("DJANGO_SETTINGS_MODULE","core.settings")
-      django.setup()
-      from django.contrib.auth import get_user_model
-      User = get_user_model()
-      u = os.environ.get('RENDER_ADMIN_USER')
-      p = os.environ.get('RENDER_ADMIN_PASS')
-      e = os.environ.get('RENDER_ADMIN_EMAIL', 'admin@example.com')
-      if u and p:
-        user_qs = User.objects.filter(username=u)
-        if not user_qs.exists():
-          User.objects.create_superuser(u, e, p)
-          print('Created superuser', u)
-        else:
-          user = user_qs.first()
-          # Ensure it's staff/superuser and update password to the provided one
-          updated = False
-          if not user.is_superuser:
-            user.is_superuser = True
-            updated = True
-          if not user.is_staff:
-            user.is_staff = True
-            updated = True
-          # Always set password to match provided secret (idempotent)
-          user.set_password(p)
-          user.save()
-          print('Superuser exists — password updated for', u)
-          if updated:
-            print('Also ensured staff/superuser flags for', u)
-      else:
-        print('RENDER_ADMIN_USER or RENDER_ADMIN_PASS not set')
-      PY
-      exec gunicorn core.wsgi:application --bind 0.0.0.0:$PORT --workers 3 --log-file -
+    startCommand: bash scripts/start_debug.sh
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: core.settings
