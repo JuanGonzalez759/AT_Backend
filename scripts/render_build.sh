@@ -35,14 +35,18 @@ PY
   fi
 done
 
-if [ -f AT_Backend/fixtures.json ]; then
-  echo "AT_Backend/fixtures.json found: loading data..."
-  python manage.py loaddata AT_Backend/fixtures.json
-elif [ -f fixtures.json ]; then
-  echo "fixtures.json found at repo root: loading data..."
-  python manage.py loaddata fixtures.json
+if [ "${SKIP_LOADDATA:-0}" = "1" ]; then
+  echo "SKIP_LOADDATA=1 -> skipping loaddata step"
 else
-  echo "no fixtures.json found"
+  if [ -f AT_Backend/fixtures.json ]; then
+    echo "AT_Backend/fixtures.json found: loading data..."
+    python manage.py loaddata AT_Backend/fixtures.json || true
+  elif [ -f fixtures.json ]; then
+    echo "fixtures.json found at repo root: loading data..."
+    python manage.py loaddata fixtures.json || true
+  else
+    echo "no fixtures.json found"
+  fi
 fi
 
 # Collect static files
